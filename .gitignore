@@ -1,0 +1,37 @@
+# Secrets and local config - NEVER commit these
+.env
+secrets/
+k8s/overlays/local/
+
+# Terraform (if used in future)
+*.tfstate*
+*.tfvars
+!*.tfvars.example
+.terraform/
+
+# Downloaded binaries
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# TeslaFi import data
+import/
+*.csv
+
+# Backups
+backups/
+*.sql.gz
+*.bck
+
+# Claude Artifacts
+.claude/
+.claude/**
+

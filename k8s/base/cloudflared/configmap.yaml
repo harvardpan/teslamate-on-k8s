@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: teslamate
+data:
+  config.yaml: |
+    tunnel: teslamate
+    credentials-file: /etc/cloudflared/credentials.json
+    no-autoupdate: true
+    ingress:
+      - hostname: ssh.example.com
+        service: ssh://192.168.1.167:22
+      - hostname: teslamate.example.com
+        service: http://oauth2-proxy.teslamate.svc.cluster.local:4180
+      - service: http_status:404

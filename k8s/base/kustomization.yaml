@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: teslamate
+
+resources:
+  - namespace.yaml
+  # PostgreSQL (PVCs managed outside Tilt — see Tiltfile)
+  - postgres/statefulset.yaml
+  - postgres/service.yaml
+  # TeslaMate (PVCs managed outside Tilt — see Tiltfile)
+  - teslamate/deployment.yaml
+  - teslamate/service.yaml
+  - teslamate/ingress.yaml
+  # Grafana
+  - grafana/deployment.yaml
+  - grafana/service.yaml
+  - grafana/ingress.yaml
+  # Mosquitto
+  - mosquitto/configmap.yaml
+  - mosquitto/deployment.yaml
+  - mosquitto/service.yaml
+  # oauth2-proxy
+  - oauth2-proxy/deployment.yaml
+  - oauth2-proxy/service.yaml
+  # Cloudflare Tunnel
+  - cloudflared/configmap.yaml
+  - cloudflared/deployment.yaml

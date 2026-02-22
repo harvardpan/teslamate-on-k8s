@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  namespace: teslamate
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.8.2
+          ports:
+            - containerPort: 4180
+          args:
+            - --http-address=0.0.0.0:4180
+            - --provider=google
+            - --authenticated-emails-file=/etc/oauth2-proxy/authenticated-emails.txt
+            - --cookie-secure=true
+            - --cookie-httponly=true
+            - --cookie-samesite=lax
+            - --reverse-proxy=true
+            - --set-xauthrequest=true
+            - --upstream=http://traefik.kube-system.svc.cluster.local:80
+            - --email-domain=*
+            - --skip-provider-button=true
+            - --redirect-url=https://teslamate.example.com/oauth2/callback
+            - --cookie-domain=.example.com
+            - --whitelist-domain=.example.com
+            - --pass-host-header=true
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-secret
+                  key: OAUTH_CLIENT_ID
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-secret
+                  key: OAUTH_CLIENT_SECRET
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-secret
+                  key: OAUTH_COOKIE_SECRET
+          volumeMounts:
+            - name: authenticated-emails
+              mountPath: /etc/oauth2-proxy
+              readOnly: true
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              memory: 32Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+      volumes:
+        - name: authenticated-emails
+          secret:
+            secretName: oauth2-proxy-emails

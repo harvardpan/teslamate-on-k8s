@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teslamate
+  namespace: teslamate
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: teslamate
+  template:
+    metadata:
+      labels:
+        app: teslamate
+    spec:
+      containers:
+        - name: teslamate
+          image: teslamate/teslamate:2.2.0
+          ports:
+            - containerPort: 4000
+          env:
+            - name: DATABASE_USER
+              value: teslamate
+            - name: DATABASE_NAME
+              value: teslamate
+            - name: DATABASE_HOST
+              value: postgres
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: MQTT_HOST
+              value: mosquitto
+            - name: TZ
+              value: UTC
+            - name: DATABASE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: teslamate-db-secret
+                  key: POSTGRES_PASSWORD
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: teslamate-secret
+                  key: ENCRYPTION_KEY
+            - name: GRAFANA_HOST
+              value: teslamate.example.com/grafana
+          volumeMounts:
+            - name: import-data
+              mountPath: /opt/app/import
+          securityContext:
+            runAsUser: 10000
+            runAsGroup: 10001
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 100m
+            limits:
+              memory: 1536Mi
+              cpu: 1000m
+      volumes:
+        - name: import-data
+          persistentVolumeClaim:
+            claimName: teslamate-import
