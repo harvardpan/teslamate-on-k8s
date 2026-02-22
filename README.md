@@ -155,24 +155,36 @@ The restore script:
 
 ### Remote kubectl from MacBook (via Lens or CLI)
 
-The k3s API server on the RPi is firewalled to localhost only. Access it via SSH tunnel:
+The k3s API server on the RPi is firewalled to localhost only. Access it via SSH tunnel, either on the local network or remotely through Cloudflare Tunnel:
 
 ```bash
-# Start SSH tunnel (maps RPi port 6443 to local port 16443)
+# Option A: Local network (mDNS)
 ssh -f -N teslamate-pi
 
-# Use kubectl with the RPi kubeconfig
+# Option B: Remote (via Cloudflare Tunnel — works from anywhere)
+ssh -f -N teslamate-pi-remote
+
+# Then use kubectl with the RPi kubeconfig
 KUBECONFIG=~/.kube/teslamate-pi-config kubectl get pods -n teslamate
 ```
 
-For Lens: add `~/.kube/teslamate-pi-config` as a kubeconfig. Start the SSH tunnel before connecting.
+For Lens: add `~/.kube/teslamate-pi-config` as a kubeconfig. Start the SSH tunnel (option A or B) before connecting.
 
 SSH config (`~/.ssh/config`):
 ```
+# Local network (mDNS)
 Host teslamate-pi
     HostName teslamate-pi.local
     User harvardpan
     IdentityFile ~/.ssh/id_ed25519
+    LocalForward 16443 127.0.0.1:6443
+
+# Remote access via Cloudflare Tunnel
+Host teslamate-pi-remote
+    HostName ssh.panfamily.org
+    User harvardpan
+    IdentityFile ~/.ssh/id_ed25519
+    ProxyCommand cloudflared access ssh --hostname %h
     LocalForward 16443 127.0.0.1:6443
 ```
 
