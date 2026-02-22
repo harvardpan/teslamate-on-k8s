@@ -2,7 +2,8 @@
        configure setup-rpi \
        tilt-up tilt-down \
        status logs backup setup-backup-cron \
-       tesla-token import-teslafi
+       tesla-token import-teslafi \
+       migrate-postgres
 
 NAMESPACE := teslamate
 CLUSTER_NAME := teslamate
@@ -17,18 +18,24 @@ help: ## Show this help
 
 ##@ Getting Started
 
-cluster: ## Create a local k3d cluster
+cluster: ## Create a local k3d cluster (macOS dev only)
+	@if ! command -v k3d >/dev/null 2>&1; then \
+		echo "Error: k3d is not installed."; \
+		echo "  This target is for macOS local development only."; \
+		echo "  On Raspberry Pi, use: make setup-rpi"; \
+		exit 1; \
+	fi
 	@if k3d cluster list 2>/dev/null | grep -q $(CLUSTER_NAME); then \
 		echo "Cluster '$(CLUSTER_NAME)' already exists."; \
 		echo "  To delete and recreate: make cluster-delete && make cluster"; \
 	else \
-		k3d cluster create $(CLUSTER_NAME); \
+		k3d cluster create $(CLUSTER_NAME) && \
 		echo "Cluster '$(CLUSTER_NAME)' created."; \
 	fi
 	@kubectl config use-context k3d-$(CLUSTER_NAME)
 	@echo "kubectl context set to k3d-$(CLUSTER_NAME)"
 
-configure: ## Configure environment (interactive: domain, tunnel, secrets)
+configure: check-prerequisites ## Configure environment (interactive: domain, tunnel, secrets)
 	./scripts/configure.sh
 
 tilt-up: check-config check-secrets ## Start Tilt (deploys full stack with live UI)
@@ -59,6 +66,9 @@ import-teslafi: ## Import TeslaFi CSV data (CSV_DIR=path, default ./import)
 
 setup-rpi: ## Set up Raspberry Pi (run on RPi only)
 	./scripts/setup-rpi.sh
+
+migrate-postgres: ## Migrate PostgreSQL data from MacBook to RPi (RPI_HOST=user@host)
+	./scripts/migrate-postgres.sh $(RPI_HOST)
 
 ##@ Operations
 
@@ -94,6 +104,33 @@ tilt-down: ## Stop Tilt and clean up
 
 # --- Internal targets (not shown in help) ---
 
+CONFIGURE_PREREQS := cloudflared kubectl openssl python3
+
+check-prerequisites:
+	@MISSING=""; \
+	for cmd in $(CONFIGURE_PREREQS); do \
+		if ! command -v $$cmd >/dev/null 2>&1; then \
+			MISSING="$$MISSING  - $$cmd\n"; \
+		fi; \
+	done; \
+	if [ -n "$$MISSING" ]; then \
+		echo "Error: Missing required tools:"; \
+		echo ""; \
+		printf "$$MISSING"; \
+		echo ""; \
+		if [ "$$(uname -s)" = "Darwin" ]; then \
+			echo "Install with: brew install <tool>"; \
+		else \
+			echo "Install missing tools:"; \
+			if ! command -v cloudflared >/dev/null 2>&1; then \
+				echo "  cloudflared:"; \
+				echo "    curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb -o /tmp/cloudflared.deb"; \
+				echo "    sudo dpkg -i /tmp/cloudflared.deb"; \
+			fi; \
+		fi; \
+		exit 1; \
+	fi
+
 REQUIRED_SECRETS := teslamate-db-secret teslamate-secret oauth2-proxy-secret oauth2-proxy-emails cloudflared-secret
 
 check-config:
@@ -109,7 +146,7 @@ check-config:
 check-secrets:
 	@MISSING=""; \
 	for secret in $(REQUIRED_SECRETS); do \
-		if ! kubectl get secret $$secret -n $(NAMESPACE) &>/dev/null; then \
+		if ! kubectl get secret $$secret -n $(NAMESPACE) >/dev/null 2>&1; then \
 			MISSING="$$MISSING  - $$secret\n"; \
 		fi; \
 	done; \

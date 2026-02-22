@@ -66,14 +66,25 @@ Once connected via SSH:
 ```bash
 git clone https://github.com/harvardpan/teslamate-on-k8s.git
 cd teslamate-on-k8s
-./scripts/setup-rpi.sh
+make setup-rpi
 ```
 
 The script will:
 - Update system packages
 - Configure 2GB swap on the NVMe SSD
+- Enable cgroup memory (required for k3s; reboots if needed — re-run after reboot)
 - Install k3s with `--bind-address 127.0.0.1` (API server only on localhost)
 - Set up kubeconfig for non-root kubectl access
+
+### Install cloudflared
+
+`cloudflared` is required by `make configure` to set up the Cloudflare Tunnel.
+Install it before proceeding:
+
+```bash
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb -o /tmp/cloudflared.deb
+sudo dpkg -i /tmp/cloudflared.deb
+```
 
 The script does **not** format or mount any drives — the 256GB NVMe SSD is
 already the boot drive and data drive. k3s PVCs are stored at

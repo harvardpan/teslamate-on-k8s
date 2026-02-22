@@ -71,12 +71,6 @@ echo ""
 echo "Step 3: Cloudflare Tunnel Setup"
 echo ""
 
-if ! command -v cloudflared &>/dev/null; then
-  echo "Error: cloudflared is not installed."
-  echo "Install with: brew install cloudflared"
-  exit 1
-fi
-
 # Authenticate
 if [ -f "$HOME/.cloudflared/cert.pem" ]; then
   echo "  Already authenticated (found ~/.cloudflared/cert.pem)."
@@ -398,7 +392,8 @@ echo "Step 10: Creating Kubernetes secrets"
 # Check if cluster is reachable
 if ! kubectl cluster-info &>/dev/null; then
   echo "  Warning: Kubernetes cluster not reachable. Skipping secret creation."
-  echo "  Run 'make configure' again after 'make cluster' to create secrets."
+  echo "  Run 'make configure' again after the cluster is running."
+  echo "  (macOS: make cluster | RPi: make setup-rpi)"
   echo ""
 else
   # Ensure namespace exists
@@ -436,6 +431,10 @@ echo ""
 echo "=== Configuration complete ==="
 echo ""
 echo "Next steps:"
-echo "  make tilt-up     # deploy the full stack"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  echo "  make tilt-up                        # deploy the full stack"
+else
+  echo "  kubectl apply -k k8s/overlays/local/  # deploy the full stack"
+fi
 echo ""
 echo "To reconfigure, re-run: make configure"

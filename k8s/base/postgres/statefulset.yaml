@@ -14,6 +14,15 @@ spec:
       labels:
         app: postgres
     spec:
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.37
+          command: ["sh", "-c", "mkdir -p /data/pgdata && chown -R 999:999 /data/pgdata && chmod 700 /data/pgdata"]
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /data
+          securityContext:
+            runAsUser: 0
       containers:
         - name: postgres
           image: postgres:16.8
@@ -39,6 +48,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+              add: ["CHOWN", "FOWNER", "DAC_OVERRIDE"]
           resources:
             requests:
               memory: 256Mi

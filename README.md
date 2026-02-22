@@ -98,7 +98,7 @@ For a permanent, low-power deployment (~4W), run the setup script on your RPi:
 # On the RPi (via SSH)
 git clone https://github.com/<your-username>/teslamate-on-k8s.git
 cd teslamate-on-k8s
-./scripts/setup-rpi.sh    # installs k3s, configures SSD storage
+make setup-rpi             # installs k3s, configures SSD storage
 make configure             # same interactive setup
 kubectl apply -k k8s/overlays/local/
 ```

@@ -8,13 +8,18 @@
 #   1. k3d cluster running: make cluster
 #   2. Environment configured: make configure
 
-# Apply PVCs directly — these are NOT managed by Tilt so they persist across tilt down/up.
+# Apply PVCs directly — NOT managed by Tilt so they persist across tilt down/up.
+# PVCs are also listed in kustomization.yaml (for kubectl apply -k on RPi), so we
+# must filter them out of the kustomize output below to prevent Tilt from deleting
+# them on teardown.
 local('kubectl apply -f k8s/base/postgres/pvc.yaml -f k8s/base/teslamate/import-pvc.yaml')
 
-# Deploy all resources from the local Kustomize overlay
+# Deploy all resources from the local Kustomize overlay, excluding PVCs
 overlay_dir = 'k8s/overlays/local'
 if os.path.exists(os.path.join(overlay_dir, 'kustomization.yaml')):
-    k8s_yaml(kustomize(overlay_dir))
+    all_objects = decode_yaml_stream(kustomize(overlay_dir))
+    non_pvc_objects = [o for o in all_objects if o.get('kind', '') != 'PersistentVolumeClaim']
+    k8s_yaml(encode_yaml_stream(non_pvc_objects))
 
     # --- Resource grouping and port-forwards ---
 

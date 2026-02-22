@@ -5,10 +5,12 @@ namespace: teslamate
 
 resources:
   - namespace.yaml
-  # PostgreSQL (PVCs managed outside Tilt — see Tiltfile)
+  # PostgreSQL
+  - postgres/pvc.yaml
   - postgres/statefulset.yaml
   - postgres/service.yaml
-  # TeslaMate (PVCs managed outside Tilt — see Tiltfile)
+  # TeslaMate
+  - teslamate/import-pvc.yaml
   - teslamate/deployment.yaml
   - teslamate/service.yaml
   - teslamate/ingress.yaml
