@@ -1,7 +1,7 @@
 .PHONY: help cluster cluster-delete \
        configure setup-rpi \
        tilt-up tilt-down \
-       status logs backup setup-backup-cron \
+       status logs backup restore setup-backup-cron \
        tesla-token import-teslafi \
        migrate-postgres
 
@@ -80,6 +80,9 @@ logs: ## Tail TeslaMate logs (use APP=grafana for other pods)
 
 backup: ## Backup PostgreSQL (BACKUP_DIR=path, default /var/backups/teslamate)
 	./scripts/backup-postgres.sh $(or $(BACKUP_DIR),/var/backups/teslamate)
+
+restore: ## Restore PostgreSQL from backup (BACKUP_FILE=path)
+	./scripts/restore-postgres.sh $(BACKUP_FILE)
 
 setup-backup-cron: ## Install daily 3am backup cron job
 	@SCRIPT_PATH="$$(cd "$$(dirname "$(MAKEFILE_LIST)")" && pwd)/scripts/backup-postgres.sh"; \

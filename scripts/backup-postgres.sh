@@ -26,7 +26,7 @@ echo ""
 # Run pg_dump
 echo "Creating backup..."
 kubectl exec -n "$NAMESPACE" statefulset/postgres -- \
-  pg_dump -U teslamate teslamate | gzip > "$BACKUP_FILE"
+  pg_dump -U teslamate --clean --if-exists teslamate | gzip > "$BACKUP_FILE"
 
 FILESIZE=$(ls -lh "$BACKUP_FILE" | awk '{print $5}')
 echo "Backup complete: ${BACKUP_FILE} (${FILESIZE})"
