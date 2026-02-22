@@ -108,11 +108,93 @@ See [docs/rpi-setup.md](docs/rpi-setup.md) for hardware recommendations, OS inst
 ## Backups
 
 ```bash
-# Manual backup (default: /mnt/ssd/backups)
+# Manual backup (default: /var/backups/teslamate)
 make backup
 
 # Install daily 3am backup cron job
 make setup-backup-cron
+```
+
+Backups are gzipped `pg_dump` files with 7-day daily + 4-week weekly retention.
+
+## Operations Runbook
+
+### Check cluster health
+
+```bash
+make status                           # pod status
+make logs                             # TeslaMate logs
+make logs APP=grafana                 # Grafana logs
+make logs APP=postgres                # PostgreSQL logs
+```
+
+### Restart a service
+
+```bash
+kubectl rollout restart -n teslamate deploy/teslamate
+kubectl rollout restart -n teslamate deploy/grafana
+kubectl rollout restart -n teslamate deploy/cloudflared
+```
+
+### Restore from backup
+
+```bash
+# List available backups
+make restore
+
+# Restore a specific backup (will prompt for confirmation)
+make restore BACKUP_FILE=/var/backups/teslamate/teslamate-backup-20260222.sql.gz
+```
+
+The restore script:
+1. Scales down TeslaMate (prevents writes)
+2. Drops and recreates the database
+3. Loads the backup
+4. Scales TeslaMate back up
+5. Verifies row counts match
+
+### Remote kubectl from MacBook (via Lens or CLI)
+
+The k3s API server on the RPi is firewalled to localhost only. Access it via SSH tunnel:
+
+```bash
+# Start SSH tunnel (maps RPi port 6443 to local port 16443)
+ssh -f -N teslamate-pi
+
+# Use kubectl with the RPi kubeconfig
+KUBECONFIG=~/.kube/teslamate-pi-config kubectl get pods -n teslamate
+```
+
+For Lens: add `~/.kube/teslamate-pi-config` as a kubeconfig. Start the SSH tunnel before connecting.
+
+SSH config (`~/.ssh/config`):
+```
+Host teslamate-pi
+    HostName teslamate-pi.local
+    User harvardpan
+    IdentityFile ~/.ssh/id_ed25519
+    LocalForward 16443 127.0.0.1:6443
+```
+
+### Update container images
+
+1. Edit pinned versions in the deployments under `k8s/base/`
+2. Apply: `kubectl apply -k k8s/base/` (or `k8s/overlays/local/` if using overlays)
+3. Verify: `make status`
+
+### Cloudflare Tunnel not connecting
+
+```bash
+make logs APP=cloudflared
+# Common fix: restart cloudflared
+kubectl rollout restart -n teslamate deploy/cloudflared
+```
+
+### PostgreSQL disk usage
+
+```bash
+kubectl exec -n teslamate statefulset/postgres -- \
+  psql -U teslamate -c "SELECT pg_size_pretty(pg_database_size('teslamate'));"
 ```
 
 ## Secrets

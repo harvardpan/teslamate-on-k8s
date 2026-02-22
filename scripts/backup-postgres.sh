@@ -13,7 +13,10 @@ DATE=$(date +%Y%m%d)
 DAY_OF_WEEK=$(date +%u)
 BACKUP_FILE="${BACKUP_DIR}/teslamate-backup-${DATE}.sql.gz"
 
-mkdir -p "$BACKUP_DIR"
+if [ ! -d "$BACKUP_DIR" ]; then
+  sudo mkdir -p "$BACKUP_DIR"
+  sudo chown "$(id -u):$(id -g)" "$BACKUP_DIR"
+fi
 
 echo "=== PostgreSQL Backup ==="
 echo "Date: ${DATE}"
@@ -23,7 +26,7 @@ echo ""
 # Run pg_dump
 echo "Creating backup..."
 kubectl exec -n "$NAMESPACE" statefulset/postgres -- \
-  pg_dump -U teslamate teslamate | gzip > "$BACKUP_FILE"
+  pg_dump -U teslamate --clean --if-exists teslamate | gzip > "$BACKUP_FILE"
 
 FILESIZE=$(ls -lh "$BACKUP_FILE" | awk '{print $5}')
 echo "Backup complete: ${BACKUP_FILE} (${FILESIZE})"
