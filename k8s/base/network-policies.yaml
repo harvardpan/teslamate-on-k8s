@@ -1,0 +1,150 @@
+# Network Policies for the teslamate namespace.
+#
+# Default: deny all ingress. Each policy below opens only the traffic paths
+# that are required for the application to function.
+#
+# Traffic flow:
+#   internet → cloudflare → cloudflared → oauth2-proxy → traefik → teslamate/grafana
+#   teslamate → postgres, mosquitto
+#   grafana   → postgres
+
+# --- Default deny all ingress ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: teslamate
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+# --- PostgreSQL: allow from teslamate and grafana only ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-ingress
+  namespace: teslamate
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: teslamate
+        - podSelector:
+            matchLabels:
+              app: grafana
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+# --- Mosquitto: allow from teslamate only ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mosquitto-ingress
+  namespace: teslamate
+spec:
+  podSelector:
+    matchLabels:
+      app: mosquitto
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: teslamate
+      ports:
+        - protocol: TCP
+          port: 1883
+
+---
+# --- oauth2-proxy: allow from cloudflared ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-oauth2-proxy-ingress
+  namespace: teslamate
+spec:
+  podSelector:
+    matchLabels:
+      app: oauth2-proxy
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: cloudflared
+      ports:
+        - protocol: TCP
+          port: 4180
+
+---
+# --- TeslaMate: allow from traefik (kube-system namespace) ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-teslamate-ingress
+  namespace: teslamate
+spec:
+  podSelector:
+    matchLabels:
+      app: teslamate
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: TCP
+          port: 4000
+
+---
+# --- Grafana: allow from traefik (kube-system namespace) ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-grafana-ingress
+  namespace: teslamate
+spec:
+  podSelector:
+    matchLabels:
+      app: grafana
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: TCP
+          port: 3000
+
+---
+# --- Cloudflared: allow DNS (needed for tunnel establishment) ---
+# Cloudflared initiates outbound connections to Cloudflare, so no ingress
+# is needed from outside the cluster. Only allow DNS resolution.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cloudflared-ingress
+  namespace: teslamate
+spec:
+  podSelector:
+    matchLabels:
+      app: cloudflared
+  policyTypes:
+    - Ingress
+  ingress: []

@@ -28,3 +28,5 @@ resources:
   # Cloudflare Tunnel
   - cloudflared/configmap.yaml
   - cloudflared/deployment.yaml
+  # Security
+  - network-policies.yaml
