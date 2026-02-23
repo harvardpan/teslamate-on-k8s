@@ -3,7 +3,7 @@
        tilt-up tilt-down \
        status logs backup restore setup-backup-cron \
        tesla-token import-teslafi \
-       migrate-postgres
+       migrate-postgres geocode
 
 NAMESPACE := teslamate
 CLUSTER_NAME := teslamate
@@ -83,6 +83,20 @@ backup: ## Backup PostgreSQL (BACKUP_DIR=path, default /var/backups/teslamate)
 
 restore: ## Restore PostgreSQL from backup (BACKUP_FILE=path)
 	./scripts/restore-postgres.sh $(BACKUP_FILE)
+
+geocode: ## Geocode pending addresses via Google Maps API (GOOGLE_MAPS_API_KEY required)
+	@if [ -z "$(GOOGLE_MAPS_API_KEY)" ] && [ -z "$(GEOCODE_FLAGS)" ]; then \
+		echo "Error: GOOGLE_MAPS_API_KEY is required."; \
+		echo "  GOOGLE_MAPS_API_KEY=AIza... make geocode"; \
+		echo "  Or for dry run: make geocode GEOCODE_FLAGS='--dry-run'"; \
+		exit 1; \
+	fi
+	@if ! python3 -c "import psycopg2" 2>/dev/null; then \
+		echo "Error: psycopg2 is required. Install with:"; \
+		echo "  pip install psycopg2-binary"; \
+		exit 1; \
+	fi
+	./scripts/geocode-addresses.py $(GEOCODE_FLAGS)
 
 setup-backup-cron: ## Install daily 3am backup cron job
 	@SCRIPT_PATH="$$(cd "$$(dirname "$(MAKEFILE_LIST)")" && pwd)/scripts/backup-postgres.sh"; \

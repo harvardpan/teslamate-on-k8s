@@ -358,8 +358,8 @@ spec:
             - --email-domain=*
             - --skip-provider-button=true
             - --redirect-url=https://${TESLAMATE_HOSTNAME}/oauth2/callback
-            - --cookie-domain=.${ROOT_DOMAIN}
-            - --whitelist-domain=.${ROOT_DOMAIN}
+            - --cookie-domain=${TESLAMATE_HOSTNAME}
+            - --whitelist-domain=${TESLAMATE_HOSTNAME}
             - --pass-host-header=true
 EOF
 
